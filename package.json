@@ -1,0 +1,15 @@
+{
+  "name": "upstream",
+  "version": "1.0.0",
+  "description": "Upstream: fund the open-source maintainers your project depends on, powered by PayPal Subscriptions, Payouts, Webhooks, Invoicing and an AI agent.",
+  "type": "module",
+  "license": "MIT",
+  "engines": { "node": ">=18.17" },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "setup:paypal": "node scripts/setup-paypal.js",
+    "mock:paypal": "node scripts/mock-paypal.js",
+    "test": "node --test"
+  }
+}

@@ -1,0 +1,456 @@
+{
+  "info": {
+    "name": "Upstream API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Scan, pledge, claim, webhook and agent endpoints. Run in order: Scan saves scanId, Create pledge saves pledgeId."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "scanId",
+      "value": ""
+    },
+    {
+      "key": "pledgeId",
+      "value": ""
+    },
+    {
+      "key": "subscriptionId",
+      "value": ""
+    },
+    {
+      "key": "actionId",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "health"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"ok\",()=>pm.expect(pm.response.json().ok).to.eql(true));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Config",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/config",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "config"
+          ]
+        }
+      }
+    },
+    {
+      "name": "1. Scan a package.json",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/scan",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "scan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"budget\": 20,\n  \"packageJson\": \"{\\\"dependencies\\\":{\\\"express\\\":\\\"^4.19.0\\\",\\\"chalk\\\":\\\"^5.3.0\\\"}}\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const j=pm.response.json();pm.collectionVariables.set(\"scanId\",j.id);pm.test(\"split sums to budget\",()=>{const s=j.items.reduce((t,p)=>t+p.amount,0);pm.expect(Math.round(s*100)).to.eql(2000);});"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Get scan",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/scan/{{scanId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "scan",
+            "{{scanId}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Create pledge (PayPal subscription)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/pledges",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "pledges"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"scanId\": \"{{scanId}}\",\n  \"tier\": 20,\n  \"email\": \"funder@example.com\",\n  \"amounts\": {\n    \"express\": 10,\n    \"chalk\": 10\n  }\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const j=pm.response.json();pm.collectionVariables.set(\"pledgeId\",j.id);pm.test(\"approval link\",()=>pm.expect(j.approveUrl).to.include(\"paypal\"));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Get pledge",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/pledges/{{pledgeId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "pledges",
+            "{{pledgeId}}"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set(\"subscriptionId\",pm.response.json().subscriptionId);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Webhook: subscription activated (needs SKIP_WEBHOOK_VERIFY=true locally)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/paypal",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "webhooks",
+            "paypal"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"WH-DEMO-1\",\n  \"event_type\": \"BILLING.SUBSCRIPTION.ACTIVATED\",\n  \"resource\": {\n    \"id\": \"{{subscriptionId}}\",\n    \"custom_id\": \"{{pledgeId}}\"\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "6. Webhook: charge completed (runs a cycle)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/webhooks/paypal",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "webhooks",
+            "paypal"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"WH-DEMO-2\",\n  \"event_type\": \"PAYMENT.SALE.COMPLETED\",\n  \"resource\": {\n    \"id\": \"SALE-DEMO-1\",\n    \"billing_agreement_id\": \"{{subscriptionId}}\",\n    \"amount\": {\n      \"total\": \"20.00\"\n    }\n  }\n}"
+        }
+      }
+    },
+    {
+      "name": "7. Maintainer claim state",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/claim/state",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "claim",
+            "state"
+          ]
+        }
+      }
+    },
+    {
+      "name": "8. Claim (sandbox demo mode)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/claim",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "claim"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"login\": \"expressjs\",\n  \"email\": \"maintainer-sandbox@personal.example.com\"\n}"
+        }
+      }
+    },
+    {
+      "name": "9. Dev: run next cycle",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/dev/simulate-cycle",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "dev",
+            "simulate-cycle"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pledgeId\": \"{{pledgeId}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "10. Agent: propose a refund",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/agent",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "agent"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pledgeId\": \"{{pledgeId}}\",\n  \"message\": \"refund the unclaimed money\"\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const a=pm.response.json().actions||[];if(a[0])pm.collectionVariables.set(\"actionId\",a[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11. Agent: confirm action",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/agent/confirm",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "agent",
+            "confirm"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"actionId\": \"{{actionId}}\",\n  \"approve\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "Public ledger",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/ledger",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "ledger"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Impact",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/impact/{{pledgeId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "impact",
+            "{{pledgeId}}"
+          ]
+        }
+      }
+    }
+  ]
+}

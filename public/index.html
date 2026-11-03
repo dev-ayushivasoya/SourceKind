@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Upstream: pay the people your code runs on</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230c2b36'/%3E%3Cpath d='M16 26V12M16 12l-6-6M16 12l6-6M16 19l-5-4' stroke='%23bfe0e6' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- AG Grid Community (sponsor tool) powers the editable review table. The app falls back to a plain table if the CDN is unreachable. -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-grid.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-theme-quartz.css">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="top">
+    <a class="brand" href="#/" id="brand">Upstream</a>
+    <nav><a href="#/ledger">Public ledger</a><a href="#/claim">Maintainers: claim</a></nav>
+  </header>
+  <div id="notices"></div>
+  <main id="app" tabindex="-1"></main>
+  <footer>Runs on the PayPal sandbox with test money. Maintainer accounts in the demo are sandbox test accounts.</footer>
+  <script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/dist/ag-grid-community.min.js"></script>
+  <script src="/app.js" type="module"></script>
+</body>
+</html>

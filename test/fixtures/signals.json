@@ -1,0 +1,7 @@
+{ "_note": "Synthetic signals for automated tests only. Not real package statistics.",
+  "packages": [
+    { "name": "solo-lib", "version": "1.0.0", "kind": "runtime", "repo": "solo-dev/solo-lib", "ownerLogin": "solo-dev", "ownerType": "User", "npmMaintainers": 1, "contributors": 2, "downloads": 900000, "archived": false, "deprecated": false, "lastPush": "2026-10-01T00:00:00Z", "hasFunding": false, "imports": 6 },
+    { "name": "team-lib", "version": "2.0.0", "kind": "runtime", "repo": "big-org/team-lib", "ownerLogin": "big-org", "ownerType": "Organization", "npmMaintainers": 8, "contributors": 120, "downloads": 9000000, "archived": false, "deprecated": false, "lastPush": "2026-10-20T00:00:00Z", "hasFunding": true, "imports": 3 },
+    { "name": "old-lib", "version": "0.1.0", "kind": "dev", "repo": "ghost/old-lib", "ownerLogin": "ghost", "ownerType": "User", "npmMaintainers": 1, "contributors": 1, "downloads": 50000, "archived": true, "deprecated": false, "lastPush": "2020-01-01T00:00:00Z", "hasFunding": false, "imports": null },
+    { "name": "tiny-util", "version": "3.0.0", "kind": "runtime", "repo": "maria/tiny-util", "ownerLogin": "maria", "ownerType": "User", "npmMaintainers": 2, "contributors": 4, "downloads": 400000, "archived": false, "deprecated": false, "lastPush": "2026-08-01T00:00:00Z", "hasFunding": false, "imports": 2 }
+  ] }

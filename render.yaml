@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: upstream
+    runtime: node
+    plan: free
+    buildCommand: "echo no build step"
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: BASE_URL
+        sync: false          # set to your https://<name>.onrender.com URL
+      - key: PAYPAL_CLIENT_ID
+        sync: false
+      - key: PAYPAL_CLIENT_SECRET
+        sync: false
+      - key: PAYPAL_WEBHOOK_ID
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: PAYPAL_BASE
+        value: https://api-m.sandbox.paypal.com
+      - key: PAYPAL_WEB
+        value: https://www.sandbox.paypal.com
+      - key: CLAIM_DEMO_MODE
+        value: "true"
+      - key: DEV_TOOLS
+        value: "true"
