@@ -1,10 +1,10 @@
-# Upstream: pay the people your code runs on
+# SourceKind: pay the people your code runs on
 
-> Built for the **PayPal AI Hackathon** (Devpost). Working name "Upstream": change it with `APP_NAME` in `.env`.
+> Built for the **PayPal AI Hackathon** (Devpost). Working name "SourceKind": change it with `APP_NAME` in `.env`.
 
 Open-source libraries are often kept alive by one or two unpaid maintainers. GitHub Sponsors lets you fund them, but only if the maintainer has enrolled, and you still have to choose every amount yourself.
 
-**Upstream** takes a repo (or a `package.json`) and a monthly budget, scores each dependency, proposes a fair split, explains every share, and pays the maintainers through **PayPal**. Maintainers who have never signed up for anything get a claim link, and their money is held until they claim it.
+**SourceKind** takes a repo (or a `package.json`) and a monthly budget, scores each dependency, proposes a fair split, explains every share, and pays the maintainers through **PayPal**. Maintainers who have never signed up for anything get a claim link, and their money is held until they claim it.
 
 ## What PayPal does here (it is the engine, not a checkout button)
 
@@ -103,23 +103,7 @@ npm test
 
 14 tests: scoring and allocation maths, plus an end-to-end flow (scan → subscription → webhooks → held → claim → payout → returned → rollover → agent refund) against a **local fake PayPal API** (`scripts/mock-paypal.js`, also runnable as `npm run mock:paypal` for offline development with `PAYPAL_BASE=http://localhost:4010`). The fake API checks our request shapes and flow logic; it is not the real PayPal.
 
-## Known limitations (be upfront in your submission)
 
-- Only npm (`package.json`) projects; direct dependencies only; the first `MAX_PACKAGES` (20) are scanned.
-- The PayPal calls were written from PayPal's documentation and tested against the fake API above. **Run the sandbox walkthrough once end to end** and check request/response details (especially Invoicing, Login with PayPal scopes, how sandbox shows UNCLAIMED payouts, and the sale refund endpoint for subscription charges).
-- The AI agent calls PayPal through this project's own tool layer (`src/agent.js`) over the REST API. PayPal's official **Agent Toolkit / MCP server** (`@paypal/agent-toolkit`, `npx -y @paypal/mcp`) is a drop-in extension point but is not wired in here.
-- Maintainer emails are never scraped: money is held per GitHub owner until that person claims it. Unclaimed money rolls over after `CLAIM_EXPIRY_DAYS`.
-- Pledge pages are capability links (the id is unguessable) rather than full user accounts.
-- PayPal fees are not deducted from the pool (`PLATFORM_FEE_PCT` defaults to 0).
-
-## Submission checklist (from the official rules)
-
-- [ ] Public repo with the **MIT license** visible in the About box (this repo includes `LICENSE`)
-- [ ] Text description (use the sections above) + how it was built during the Submission Period
-- [ ] Working demo: hosted URL **or** these setup instructions
-- [ ] Demo video **under 3 minutes**, public on YouTube, showing the app working end to end, no third-party music or trademarks
-- [ ] Never commit `.env` (it is in `.gitignore`)
-- [ ] Deadline: **Nov 12, 2026, 12:00 pm PT** (Nov 13, 1:30 am IST). Submit a day early.
 
 ## License
 
