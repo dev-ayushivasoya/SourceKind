@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reset password · SourceKind</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Instrument+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: #e6eef3;
+        color: #10222b;
+        font-family: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+      }
+      .card {
+        width: 100%;
+        max-width: 420px;
+      }
+      h1 {
+        font-family: "Bricolage Grotesque", "Segoe UI", sans-serif;
+        font-weight: 700;
+        font-size: 2.2rem;
+        line-height: 1.05;
+        letter-spacing: -0.02em;
+        margin-bottom: 10px;
+      }
+      .sub {
+        color: #4d6470;
+        line-height: 1.5;
+        margin-bottom: 24px;
+      }
+      form {
+        display: grid;
+        gap: 16px;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        font-size: 0.88rem;
+        font-weight: 500;
+      }
+      input,
+      select {
+        font: inherit;
+        font-size: 1rem;
+        padding: 12px 14px;
+        border: 1px solid #b9c9d3;
+        border-radius: 8px;
+        background: #fff;
+        color: inherit;
+        width: 100%;
+      }
+      button {
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 1rem;
+        padding: 13px 16px;
+        border-radius: 8px;
+        border: 0;
+        background: #2b55d9;
+        color: #fff;
+        cursor: pointer;
+      }
+      button[disabled] {
+        opacity: 0.6;
+      }
+      .msg {
+        font-size: 0.9rem;
+        padding: 10px 12px;
+        border-radius: 8px;
+        display: none;
+        line-height: 1.45;
+      }
+      .msg.ok {
+        display: block;
+        background: rgba(30, 127, 85, 0.14);
+        color: #1e7f55;
+      }
+      .msg.err {
+        display: block;
+        background: rgba(192, 57, 43, 0.12);
+        color: #c0392b;
+      }
+      .back {
+        display: inline-block;
+        margin-top: 22px;
+        color: #10222b;
+        font-size: 0.9rem;
+      }
+      .hide {
+        display: none;
+      }
+      :focus-visible {
+        outline: 2px solid #2b55d9;
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1 id="title">Forgot your password?</h1>
+      <p class="sub" id="sub">
+        Enter your account email and we will send you a link to choose a new
+        one.
+      </p>
+
+      <form id="forgot" novalidate>
+        <label
+          >Account type
+          <select id="role">
+            <option value="contributor">Contributor</option>
+            <option value="maintainer">Maintainer</option>
+          </select>
+        </label>
+        <label
+          >Email
+          <input
+            id="email"
+            type="email"
+            autocomplete="email"
+            placeholder="you@example.com"
+        /></label>
+        <button type="submit">Send reset link</button>
+      </form>
+
+      <form id="reset" class="hide" novalidate>
+        <label
+          >New password
+          <input
+            id="pw"
+            type="password"
+            autocomplete="new-password"
+            placeholder="At least 8 characters"
+        /></label>
+        <label
+          >Confirm new password
+          <input id="pw2" type="password" autocomplete="new-password"
+        /></label>
+        <button type="submit">Save new password</button>
+      </form>
+
+      <div
+        class="msg"
+        id="msg"
+        role="status"
+        aria-live="polite"
+        style="margin-top: 16px"
+      ></div>
+      <a class="back" id="back" href="/login">Back to sign in</a>
+    </main>
+
+    <script>
+      // Demo note: remove this once real email sending is set up.
+      const DEMO_NOTE =
+        " (Demo mode: the link is printed in the server terminal.)";
+
+      const $ = (id) => document.getElementById(id);
+      const qs = new URLSearchParams(location.search);
+      const token = qs.get("token");
+      const roleParam = qs.get("role");
+      if (roleParam === "maintainer" || roleParam === "contributor")
+        $("role").value = roleParam;
+      $("back").href = "/login#" + $("role").value;
+
+      function say(text, ok) {
+        const m = $("msg");
+        m.textContent = text;
+        m.className = "msg " + (ok ? "ok" : "err");
+      }
+      async function post(url, body) {
+        const res = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const j = await res.json().catch(() => ({}));
+        if (!res.ok)
+          throw new Error(
+            j.message || j.error || "Something went wrong. Try again.",
+          );
+        return j;
+      }
+
+      if (token) {
+        $("title").textContent = "Choose a new password";
+        $("sub").textContent = "Pick a password with at least 8 characters.";
+        $("forgot").classList.add("hide");
+        $("reset").classList.remove("hide");
+      }
+
+      $("forgot").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const email = $("email").value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+          return say("Enter a valid email address.", false);
+        const btn = e.target.querySelector("button");
+        btn.disabled = true;
+        try {
+          await post("/api/auth/forgot", { role: $("role").value, email });
+          say(
+            "If an account exists for that email, a reset link is on its way." +
+              DEMO_NOTE,
+            true,
+          );
+        } catch (err) {
+          say(err.message, false);
+        }
+        btn.disabled = false;
+      });
+
+      $("reset").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if ($("pw").value.length < 8)
+          return say("Use at least 8 characters.", false);
+        if ($("pw").value !== $("pw2").value)
+          return say("The two passwords do not match.", false);
+        const btn = e.target.querySelector("button");
+        btn.disabled = true;
+        try {
+          await post("/api/auth/reset", { token, password: $("pw").value });
+          say("Password updated. You can sign in now.", true);
+          $("reset").classList.add("hide");
+          $("back").textContent = "Go to sign in";
+        } catch (err) {
+          say(err.message, false);
+          btn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

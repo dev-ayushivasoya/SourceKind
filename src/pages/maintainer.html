@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+  <body style="font-family: system-ui; padding: 40px">
+    <h1>Maintainer dashboard</h1>
+    <button id="out">Sign out</button>
+    <script>
+      document.getElementById("out").onclick = async () => {
+        await fetch("/api/auth/logout", { method: "POST" });
+        location.href = "/login";
+      };
+    </script>
+  </body>
+</html>
