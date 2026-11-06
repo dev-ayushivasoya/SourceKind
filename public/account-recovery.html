@@ -115,13 +115,7 @@
       </p>
 
       <form id="forgot" novalidate>
-        <label
-          >Account type
-          <select id="role">
-            <option value="contributor">Contributor</option>
-            <option value="maintainer">Maintainer</option>
-          </select>
-        </label>
+        <input id="role" type="hidden" value="contributor" />
         <label
           >Email
           <input
@@ -167,9 +161,7 @@
       const $ = (id) => document.getElementById(id);
       const qs = new URLSearchParams(location.search);
       const token = qs.get("token");
-      const roleParam = qs.get("role");
-      if (roleParam === "maintainer" || roleParam === "contributor")
-        $("role").value = roleParam;
+
       $("back").href = "/login#" + $("role").value;
 
       function say(text, ok) {
