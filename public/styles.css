@@ -66,6 +66,8 @@ table.t{width:100%;border-collapse:collapse;font-size:.92rem}
 .muted{color:var(--muted)} .small{font-size:.88rem} code,.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.82rem}
 .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
 .card{border:1px solid var(--line);background:var(--paper);border-radius:12px;padding:14px}.card strong{font:700 1.2rem var(--display)}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin:14px 0}
+.tabs [aria-pressed="true"]{background:var(--fjord);color:#fff;border-color:var(--fjord)}
 .spin{width:16px;height:16px;border:3px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:s .8s linear infinite}
 @keyframes s{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.spin{animation-duration:3s}.splitbar i{transition:none}html{scroll-behavior:auto}}

@@ -194,13 +194,16 @@ route("POST", "/api/agent/confirm", async ({ body }) => {
 // ---- Maintainer claim ----
 route("GET", "/api/claim/state", async ({ sess }) => {
   const user = sess.userId && db.get("users", sess.userId);
+  const login =
+    sess.githubLogin ||
+    (sess.role === "maintainer" ? user?.handle : null) ||
+    sess.claimLogin ||
+    null;
   return {
-    githubLogin:
-      sess.githubLogin ||
-      (sess.role === "maintainer" ? user?.handle : null) ||
-      null,
+    githubLogin: login,
     paypal: sess.paypal ? { email: sess.paypal.email } : null,
     demo: cfg.claimDemo,
+    payouts: engine.payoutsFor(login),
     held: Object.values(
       engine.allHeld().reduce((m, a) => {
         const k = a.owner.toLowerCase();
@@ -219,7 +222,9 @@ route("GET", "/api/claim/state", async ({ sess }) => {
 route("POST", "/api/claim", async ({ body, sess }) => {
   const user = sess.userId && db.get("users", sess.userId);
   let login =
-    sess.githubLogin || (sess.role === "maintainer" ? user?.handle : null),
+    sess.githubLogin ||
+    (sess.role === "maintainer" ? user?.handle : null) ||
+    sess.claimLogin,
     email = sess.paypal?.email,
     payerId = sess.paypal?.payerId;
   if (!login) {
@@ -241,7 +246,9 @@ route("POST", "/api/claim", async ({ body, sess }) => {
       400,
       "Enter the email of the PayPal account that should receive the money.",
     );
-  return engine.claim({ login, email, payerId });
+  const result = await engine.claim({ login, email, payerId });
+  db.update("sessions", sess.id, { claimLogin: login });
+  return result;
 });
 route("GET", "/auth/github", async ({ res, sess }) => {
   if (!cfg.github.clientId)
