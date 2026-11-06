@@ -473,6 +473,22 @@ async function ledgerView() {
 async function claimView(q) {
   const s = await api("/api/claim/state");
   const pre = q.get("login") || s.githubLogin || "";
+  const payoutRows = (rows) =>
+    rows.length
+      ? `<div class="t-wrap"><table class="t"><thead><tr><th>Package</th><th>Repository</th><th>Amount</th><th>Cycle</th><th>Status</th><th>Paid</th><th>Transaction</th></tr></thead><tbody>${rows
+          .map(
+            (p) =>
+              `<tr><td>${esc(p.pkg)}</td><td>${esc(p.repo)}</td><td>${usd(p.amount)}</td><td>${esc(p.cycle)}</td><td>${pill(p.paypalStatus ? p.paypalStatus.toLowerCase() : p.status)}</td><td>${p.paidAt ? new Date(p.paidAt).toLocaleDateString() : "—"}</td><td>${short(p.transactionId)}</td></tr>`,
+          )
+          .join("")}</tbody></table></div>`
+      : '<p class="muted">No payouts in this tab yet.</p>';
+  const paidPayouts = s.payouts.filter((p) => p.status === "paid");
+  const pendingPayouts = s.payouts.filter((p) =>
+    ["held", "queued", "sent", "unclaimed", "on_hold"].includes(p.status),
+  );
+  const otherPayouts = s.payouts.filter(
+    (p) => !["paid", "held", "queued", "sent", "unclaimed", "on_hold"].includes(p.status),
+  );
   app.innerHTML = `<h2>Maintainers: claim your funding</h2>
   <p class="lede">If someone who uses your project set money aside for you, claim it here. Prove you maintain the project with GitHub, tell PayPal where to send it, and the payout goes out in one batch.</p>
   <div class="cols"><div>
@@ -490,7 +506,33 @@ async function claimView(q) {
         : ""
     }
     <button class="btn" id="claim">Claim and get paid</button><div class="err" id="claimMsg" role="alert"></div>
-  </div></div>`;
+  </div></div>
+  <section class="panel" style="margin-top:24px" aria-labelledby="payouts-title">
+    <h3 id="payouts-title">Your payouts</h3>
+    <p class="muted small">Track payout progress for your claimed maintainer account.</p>
+    <div class="tabs" role="group" aria-label="Payout status">
+      <button class="btn small" type="button" id="payout-tab-pending" aria-controls="payout-panel" aria-pressed="true" data-payout-tab="pending">Pending (${pendingPayouts.length})</button>
+      <button class="btn small ghost" type="button" id="payout-tab-paid" aria-controls="payout-panel" aria-pressed="false" data-payout-tab="paid">Paid (${paidPayouts.length})</button>
+      <button class="btn small ghost" type="button" id="payout-tab-other" aria-controls="payout-panel" aria-pressed="false" data-payout-tab="other">Other (${otherPayouts.length})</button>
+    </div>
+    <div id="payout-panel" aria-live="polite" aria-labelledby="payout-tab-pending">${payoutRows(pendingPayouts)}</div>
+  </section>`;
+  const payoutTabs = {
+    pending: pendingPayouts,
+    paid: paidPayouts,
+    other: otherPayouts,
+  };
+  document.querySelectorAll("[data-payout-tab]").forEach((tab) => {
+    tab.onclick = () => {
+      document.querySelectorAll("[data-payout-tab]").forEach((button) => {
+        const selected = button === tab;
+        button.setAttribute("aria-pressed", String(selected));
+        button.classList.toggle("ghost", !selected);
+      });
+      $("#payout-panel").setAttribute("aria-labelledby", tab.id);
+      $("#payout-panel").innerHTML = payoutRows(payoutTabs[tab.dataset.payoutTab]);
+    };
+  });
   $("#claim").onclick = async () => {
     const m = $("#claimMsg");
     m.className = "err";
@@ -503,7 +545,7 @@ async function claimView(q) {
       m.className = "small";
       m.style.color = "#1f7a4d";
       m.textContent = r.released
-        ? `Released ${usd(r.total)} to PayPal. Watch the status on the funder's page.`
+        ? `Released ${usd(r.total)} to PayPal. Track its status in Your payouts below.`
         : "Saved. Future contributions for you will be paid out automatically.";
       setTimeout(render, 1500);
     } catch (err) {

@@ -327,6 +327,25 @@ export const heldFor = (login) => {
     (a) => a.owner?.toLowerCase() === key && a.status === "held",
   );
 };
+export const payoutsFor = (login) => {
+  const key = typeof login === "string" ? login.trim().toLowerCase() : "";
+  if (!key) return [];
+  return db
+    .filter("allocations", (a) => a.owner?.toLowerCase() === key)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .map((a) => ({
+      pkg: a.pkg,
+      repo: a.repo,
+      amount: a.amount,
+      cycle: a.cycle,
+      status: a.status,
+      paypalStatus: a.paypalStatus || null,
+      batchId: a.payoutBatchId,
+      transactionId: a.transactionId,
+      createdAt: a.createdAt,
+      paidAt: a.paidAt || null,
+    }));
+};
 export const allHeld = () =>
   db.filter("allocations", (a) => a.status === "held");
 

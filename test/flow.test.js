@@ -111,6 +111,8 @@ test('claiming releases held money through one Payouts batch', async () => {
   assert.equal(batch.body.items[0].receiver, 'PAYER-MOCK');
   assert.match(batch.body.sender_batch_header.sender_batch_id, new RegExp(state.pledge));
   state.itemId = batch.body.items[0].sender_item_id;
+  const payouts = await api('/api/claim/state', undefined, cookie);
+  assert.ok(payouts.json.payouts.some(p => p.status === 'sent' && p.pkg));
 });
 
 test('signing out clears linked claim identities', async () => {
@@ -133,6 +135,8 @@ test('payout webhooks drive status: succeeded, then returned money rolls over', 
   let v = (await api(`/api/pledges/${state.pledge}`)).json;
   const a = v.allocations.find(x => x.id === state.itemId);
   assert.equal(a.status, 'paid'); assert.equal(a.transactionId, 'TX-1');
+  const payoutState = await api('/api/claim/state', undefined, state.claimCookie);
+  assert.ok(payoutState.json.payouts.some(p => p.status === 'paid' && p.transactionId === 'TX-1'));
   // A second maintainer claims, then PayPal reports the payout as returned
   const cookie = await maintainerCookie('maria');
   await api('/api/claim', { email: 'maria@example.com' }, cookie);

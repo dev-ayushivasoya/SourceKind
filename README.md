@@ -37,7 +37,7 @@ No API key? Everything still works with built-in rule-based explanations and a r
 
 ## Features
 
-Repo URL or pasted `package.json` · dependency scan via npm + GitHub · explainable scoring · editable split with live budget bar · risk flags · PayPal subscription funding · batch payouts with live webhook status · maintainer claim (GitHub + PayPal) · automatic rollover of unclaimed/returned money · PayPal invoices · confirmation-gated AI agent · public ledger · shareable README badge · impact numbers on the dashboard.
+Repo URL or pasted `package.json` · dependency scan via npm + GitHub · explainable scoring · editable split with live budget bar · risk flags · PayPal subscription funding · batch payouts with live webhook status · maintainer claim (GitHub + PayPal) with pending, paid and other payout tabs · automatic rollover of unclaimed/returned money · PayPal invoices · confirmation-gated AI agent · public ledger · shareable README badge · impact numbers on the dashboard.
 
 ## Quick start (VS Code)
 
@@ -65,7 +65,7 @@ npm start                   # opens on http://localhost:3000
 1. Open the app, paste a public GitHub repo with a `package.json` (or paste one), choose a budget, **Scan**.
 2. Review the split in the table. Edit an amount, watch the bar update. Enter your email and click **Start ... with PayPal**.
 3. Approve the subscription in the PayPal popup with your sandbox **funder** account. PayPal charges the first cycle; the webhook arrives; allocations appear on the dashboard as **waiting for claim**.
-4. Open **Maintainers: claim**. In sandbox demo mode, enter a maintainer name from the list and one of your sandbox **maintainer** emails, then **Claim**. A PayPal payout batch is sent; payout webhooks flip the rows to **paid** (the ledger shows batch / item / transaction ids).
+4. Open **Maintainers: claim**. In sandbox demo mode, enter a maintainer name from the list and one of your sandbox **maintainer** emails, then **Claim**. Track payouts in the maintainer page's **Pending**, **Paid**, and **Other** tabs as PayPal webhooks update their statuses.
 5. Press **Run next cycle now** (sandbox helper) to show the next month, including rolled-over money, without waiting 30 days.
 6. Ask the agent: "refund the unclaimed money" or "send me an invoice", then confirm.
 
