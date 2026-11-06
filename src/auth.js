@@ -143,8 +143,16 @@ export async function handleAuth(req, res, url, h) {
   }
 
   if (m === "POST" && p === "/api/auth/logout") {
-    delete sess.userId;
-    delete sess.role;
+    for (const key of [
+      "userId",
+      "role",
+      "githubLogin",
+      "paypal",
+      "ghState",
+      "ghRole",
+      "ppState",
+    ])
+      delete sess[key];
     db.set("sessions", sess.id, sess);
     send(res, 200, { ok: true });
     return true;

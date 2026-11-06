@@ -15,6 +15,7 @@ export function startMock(port = 4010) {
       const json = (code, o) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(o)); };
       const u = req.url.split('?')[0];
       if (u === '/v1/oauth2/token') return json(200, { access_token: 'mock-token', expires_in: 3600 });
+      if (u === '/v1/identity/oauth2/userinfo') return json(200, { payer_id: 'PAYER-MOCK', emails: [{ primary: true, value: 'maintainer@example.com' }] });
       if (u === '/v1/catalogs/products') return json(201, { id: 'PROD-MOCK' });
       if (u === '/v1/billing/plans') return json(201, { id: `P-MOCK-${++n}` });
       if (u === '/v1/billing/subscriptions' && req.method === 'POST') { const id = `I-MOCK${++n}`; subs[id] = body; return json(201, { id, status: 'APPROVAL_PENDING', links: [{ rel: 'approve', href: `http://localhost:${port}/approve/${id}` }] }); }

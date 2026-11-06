@@ -192,26 +192,34 @@ route("POST", "/api/agent/confirm", async ({ body }) => {
 });
 
 // ---- Maintainer claim ----
-route("GET", "/api/claim/state", async ({ sess }) => ({
-  githubLogin: sess.githubLogin || null,
-  paypal: sess.paypal ? { email: sess.paypal.email } : null,
-  demo: cfg.claimDemo,
-  held: Object.values(
-    engine.allHeld().reduce((m, a) => {
-      const k = a.owner.toLowerCase();
-      m[k] ||= { login: a.owner, repos: new Set(), total: 0 };
-      m[k].repos.add(a.repo);
-      m[k].total += a.amount;
-      return m;
-    }, {}),
-  ).map((x) => ({
-    login: x.login,
-    repos: [...x.repos],
-    total: Math.round(x.total * 100) / 100,
-  })),
-}));
+route("GET", "/api/claim/state", async ({ sess }) => {
+  const user = sess.userId && db.get("users", sess.userId);
+  return {
+    githubLogin:
+      sess.githubLogin ||
+      (sess.role === "maintainer" ? user?.handle : null) ||
+      null,
+    paypal: sess.paypal ? { email: sess.paypal.email } : null,
+    demo: cfg.claimDemo,
+    held: Object.values(
+      engine.allHeld().reduce((m, a) => {
+        const k = a.owner.toLowerCase();
+        m[k] ||= { login: a.owner, repos: new Set(), total: 0 };
+        m[k].repos.add(a.repo);
+        m[k].total += a.amount;
+        return m;
+      }, {}),
+    ).map((x) => ({
+      login: x.login,
+      repos: [...x.repos],
+      total: Math.round(x.total * 100) / 100,
+    })),
+  };
+});
 route("POST", "/api/claim", async ({ body, sess }) => {
-  let login = sess.githubLogin,
+  const user = sess.userId && db.get("users", sess.userId);
+  let login =
+    sess.githubLogin || (sess.role === "maintainer" ? user?.handle : null),
     email = sess.paypal?.email,
     payerId = sess.paypal?.payerId;
   if (!login) {
@@ -276,7 +284,13 @@ route("GET", "/auth/paypal", async ({ res, sess }) => {
 });
 route("GET", "/auth/paypal/callback", async ({ query, res, sess }) => {
   if (query.get("state") !== sess.ppState) throw fail(400, "Invalid state");
-  const who = await pay.exchangeLoginCode(query.get("code"));
+  delete sess.ppState;
+  db.set("sessions", sess.id, sess);
+  if (query.has("error"))
+    throw fail(400, "PayPal sign-in was not completed. Please try again.");
+  const code = query.get("code");
+  if (!code) throw fail(400, "PayPal did not return an authorization code.");
+  const who = await pay.exchangeLoginCode(code);
   db.update("sessions", sess.id, { paypal: who });
   return redirect(res, "/#/claim");
 });

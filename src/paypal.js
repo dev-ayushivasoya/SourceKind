@@ -147,7 +147,11 @@ export function loginUrl(state) {
 export async function exchangeLoginCode(code) {
   const res = await fetch(`${P.base}/v1/oauth2/token`, {
     method: 'POST', headers: { Authorization: `Basic ${basic()}`, 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'authorization_code', code }),
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      redirect_uri: `${cfg.baseUrl}/auth/paypal/callback`,
+    }),
   });
   const tok = await res.json().catch(() => ({}));
   if (!res.ok) throw new PayPalError(res.status, tok, 'login token');

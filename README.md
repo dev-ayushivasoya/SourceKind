@@ -69,7 +69,7 @@ npm start                   # opens on http://localhost:3000
 5. Press **Run next cycle now** (sandbox helper) to show the next month, including rolled-over money, without waiting 30 days.
 6. Ask the agent: "refund the unclaimed money" or "send me an invoice", then confirm.
 
-> **Sandbox honesty note.** Maintainer accounts in the demo are PayPal sandbox test accounts, and "claim" uses sandbox demo mode (`CLAIM_DEMO_MODE=true`). For real verification set `CLAIM_DEMO_MODE=false` and configure `GITHUB_CLIENT_ID/SECRET` (callback `BASE_URL/auth/github/callback`) plus PayPal login (return URL `BASE_URL/auth/paypal/callback` in the app's Log in with PayPal settings). Repos owned by organisations cannot be claimed in real mode yet.
+> **Sandbox honesty note.** Maintainer accounts in the demo are PayPal sandbox test accounts, and "claim" uses sandbox demo mode (`CLAIM_DEMO_MODE=true`). For real verification set `CLAIM_DEMO_MODE=false`, configure maintainer GitHub sign-in (`LOGIN_GITHUB_CLIENT_ID/SECRET`, callback `BASE_URL/auth/login/github/callback`), and enable PayPal login with return URL `BASE_URL/auth/paypal/callback` in the PayPal app settings. Sign in as the maintainer first, then connect PayPal; the claim uses the signed-in GitHub handle automatically. Repos owned by organisations cannot be claimed in real mode yet.
 > "Run next cycle now" exists only because PayPal bills monthly; it calls the same payout code as the webhook path. Turn it off with `DEV_TOOLS=false`.
 
 ## Deploy on Render (public demo URL)

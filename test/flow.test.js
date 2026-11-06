@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'upstream-'));
-let mock, app, base, calls;
+let mock, app, base, calls, db;
 
 before(async () => {
   const { startMock } = await import('../scripts/mock-paypal.js');
@@ -17,12 +17,28 @@ before(async () => {
     DATA_DIR: tmp, PAYPAL_BASE: mock.url, PAYPAL_CLIENT_ID: 'id', PAYPAL_CLIENT_SECRET: 'secret', PAYPAL_WEBHOOK_ID: 'WH-OK',
     SCAN_FIXTURE: path.join(here, 'fixtures/signals.json'), ANTHROPIC_API_KEY: '', DEV_TOOLS: 'true', CLAIM_DEMO_MODE: 'true', PORT: '4012', BASE_URL: 'http://localhost:4012',
   });
+  ({ db } = await import('../src/store.js'));
   const { server } = await import('../server.js');
   await new Promise(r => server.listen(4012, r)); app = server; base = 'http://localhost:4012';
 });
 after(() => { app.close(); mock.server.close(); });
 
-const api = (p, body) => fetch(base + p, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined).then(async r => ({ status: r.status, json: await r.json().catch(() => null) }));
+const api = (p, body, cookie) => {
+  const options = {};
+  if (body) {
+    options.method = 'POST';
+    options.headers = { 'content-type': 'application/json' };
+    options.body = JSON.stringify(body);
+  }
+  if (cookie) options.headers = { ...options.headers, cookie };
+  return fetch(base + p, options).then(async r => ({ status: r.status, json: await r.json().catch(() => null) }));
+};
+const maintainerCookie = async handle => {
+  const id = `test-session-${handle}`;
+  db.set('users', id, { id, role: 'maintainer', handle });
+  db.set('sessions', id, { id, userId: id, role: 'maintainer' });
+  return `sid=${id}`;
+};
 let ev = 0; const hook = (type, resource) => api('/api/webhooks/paypal', { id: `WH-EVT-${++ev}`, event_type: type, resource });
 const state = {};
 
@@ -63,13 +79,53 @@ test('duplicate webhook events are ignored', async () => {
   assert.equal(r.json.duplicate, true);
 });
 
+test('PayPal login exchanges the code with the registered callback URL', async () => {
+  const cookie = await maintainerCookie('solo-dev');
+  const start = await fetch(`${base}/auth/paypal`, { headers: { cookie }, redirect: 'manual' });
+  assert.equal(start.status, 302);
+  const authorization = new URL(start.headers.get('location'));
+  const callback = `${base}/auth/paypal/callback`;
+  assert.equal(authorization.searchParams.get('redirect_uri'), callback);
+  const result = await fetch(`${callback}?code=mock-code&state=${authorization.searchParams.get('state')}`, { headers: { cookie }, redirect: 'manual' });
+  assert.equal(result.status, 302);
+  const tokenCall = calls.find(c => c.url === '/v1/oauth2/token' && String(c.body).includes('grant_type=authorization_code'));
+  assert.ok(tokenCall);
+  assert.equal(new URLSearchParams(tokenCall.body).get('redirect_uri'), callback);
+  assert.equal(db.get('sessions', 'test-session-solo-dev').paypal.email, 'maintainer@example.com');
+  const claimState = await api('/api/claim/state', undefined, cookie);
+  assert.equal(claimState.json.githubLogin, 'solo-dev');
+  assert.equal(claimState.json.paypal.email, 'maintainer@example.com');
+  state.claimCookie = cookie;
+});
+
 test('claiming releases held money through one Payouts batch', async () => {
-  const r = await api('/api/claim', { login: 'solo-dev', email: 'solo@example.com' });
+  const anonymous = await api('/api/claim', { login: 'solo-dev', email: 'solo@example.com' });
+  assert.equal(anonymous.status, 403);
+  const cookie = state.claimCookie;
+  const stateResponse = await api('/api/claim/state', undefined, cookie);
+  assert.equal(stateResponse.json.githubLogin, 'solo-dev');
+  const r = await api('/api/claim', {}, cookie);
   assert.equal(r.status, 200); assert.ok(r.json.released >= 1);
   const batch = calls.filter(c => c.url === '/v1/payments/payouts').pop();
-  assert.equal(batch.body.items[0].receiver, 'solo@example.com');
+  assert.equal(batch.body.items[0].recipient_type, 'PAYPAL_ID');
+  assert.equal(batch.body.items[0].receiver, 'PAYER-MOCK');
   assert.match(batch.body.sender_batch_header.sender_batch_id, new RegExp(state.pledge));
   state.itemId = batch.body.items[0].sender_item_id;
+});
+
+test('signing out clears linked claim identities', async () => {
+  const cookie = await maintainerCookie('logout-dev');
+  db.update('sessions', 'test-session-logout-dev', {
+    githubLogin: 'old-github',
+    paypal: { email: 'old-paypal@example.com', payerId: 'OLD-PAYER' },
+    ppState: 'old-state',
+  });
+  const result = await api('/api/auth/logout', {}, cookie);
+  assert.equal(result.status, 200);
+  const session = db.get('sessions', 'test-session-logout-dev');
+  assert.equal(session.role, undefined);
+  assert.equal(session.githubLogin, undefined);
+  assert.equal(session.paypal, undefined);
 });
 
 test('payout webhooks drive status: succeeded, then returned money rolls over', async () => {
@@ -78,7 +134,8 @@ test('payout webhooks drive status: succeeded, then returned money rolls over', 
   const a = v.allocations.find(x => x.id === state.itemId);
   assert.equal(a.status, 'paid'); assert.equal(a.transactionId, 'TX-1');
   // A second maintainer claims, then PayPal reports the payout as returned
-  await api('/api/claim', { login: 'maria', email: 'maria@example.com' });
+  const cookie = await maintainerCookie('maria');
+  await api('/api/claim', { email: 'maria@example.com' }, cookie);
   v = (await api(`/api/pledges/${state.pledge}`)).json;
   const m = v.allocations.find(x => x.owner === 'maria');
   await hook('PAYMENT.PAYOUTS-ITEM.RETURNED', { payout_item_id: 'PI-2', payout_item: { sender_item_id: m.id } });
