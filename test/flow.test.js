@@ -107,8 +107,8 @@ test('claiming releases held money through one Payouts batch', async () => {
   const r = await api('/api/claim', {}, cookie);
   assert.equal(r.status, 200); assert.ok(r.json.released >= 1);
   const batch = calls.filter(c => c.url === '/v1/payments/payouts').pop();
-  assert.equal(batch.body.items[0].recipient_type, 'PAYPAL_ID');
-  assert.equal(batch.body.items[0].receiver, 'PAYER-MOCK');
+  assert.equal(batch.body.items[0].recipient_type, 'EMAIL');
+  assert.equal(batch.body.items[0].receiver, 'maintainer@example.com');
   assert.match(batch.body.sender_batch_header.sender_batch_id, new RegExp(state.pledge));
   state.itemId = batch.body.items[0].sender_item_id;
   const payouts = await api('/api/claim/state', undefined, cookie);

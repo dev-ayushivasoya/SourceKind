@@ -222,9 +222,9 @@ route("GET", "/api/claim/state", async ({ sess }) => {
 route("POST", "/api/claim", async ({ body, sess }) => {
   const user = sess.userId && db.get("users", sess.userId);
   let login =
-    sess.githubLogin ||
-    (sess.role === "maintainer" ? user?.handle : null) ||
-    sess.claimLogin,
+      sess.githubLogin ||
+      (sess.role === "maintainer" ? user?.handle : null) ||
+      sess.claimLogin,
     email = sess.paypal?.email,
     payerId = sess.paypal?.payerId;
   if (!login) {
@@ -249,6 +249,20 @@ route("POST", "/api/claim", async ({ body, sess }) => {
   const result = await engine.claim({ login, email, payerId });
   db.update("sessions", sess.id, { claimLogin: login });
   return result;
+});
+route("POST", "/api/dev/seed-held", async ({ body, sess }) => {
+  if (!cfg.devTools) throw fail(404, "Not found");
+  const user = sess.userId && db.get("users", sess.userId);
+  const login =
+    sess.githubLogin || (sess.role === "maintainer" ? user?.handle : null);
+  if (!login) throw fail(401, "Sign in as a maintainer first.");
+  const amount = Math.max(Number(body?.amount) || 5, cfg.minPayout);
+  return engine.seedHeld({
+    login,
+    amount,
+    pkg: "demo-package",
+    repo: `${login}/demo-package`,
+  });
 });
 route("GET", "/auth/github", async ({ res, sess }) => {
   if (!cfg.github.clientId)
