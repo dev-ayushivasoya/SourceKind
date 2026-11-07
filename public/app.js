@@ -13,15 +13,15 @@ const app = $("#app");
 let CFG = {},
   timer = null,
   gridApi = null;
-const COLORS = [
-  "#1d6f8f",
-  "#d9c58b",
-  "#0c2b36",
-  "#6bb3c4",
-  "#a4762c",
-  "#3d8f6a",
-  "#7a8fa0",
-  "#b53a24",
+const SPLIT_GRADIENTS = [
+  "linear-gradient(135deg, #0c2b36, #155b78)",
+  "linear-gradient(135deg, #12445d, #1d6f8f)",
+  "linear-gradient(135deg, #1a5d7b, #3289ac)",
+  "linear-gradient(135deg, #28799a, #4b9fbe)",
+  "linear-gradient(135deg, #3f94b2, #6bb3c4)",
+  "linear-gradient(135deg, #5ca9c4, #84c5d8)",
+  "linear-gradient(135deg, #76bad1, #a1d6e5)",
+  "linear-gradient(135deg, #91cbe0, #b9e2f1)",
 ];
 
 async function api(path, body) {
@@ -155,7 +155,7 @@ function splitBar(rows, budget) {
   const seg = act
     .map(
       (r, i) =>
-        `<i style="width:${(r.amount / Math.max(budget, total)) * 100}%;background:${COLORS[i % COLORS.length]}" title="${esc(r.name)} ${usd(r.amount)}"></i>`,
+        `<i style="width:${(r.amount / Math.max(budget, total)) * 100}%;background:${SPLIT_GRADIENTS[i % SPLIT_GRADIENTS.length]}" title="${esc(r.name)} ${usd(r.amount)}"></i>`,
     )
     .join("");
   const legend =
@@ -163,7 +163,7 @@ function splitBar(rows, budget) {
       .slice(0, 6)
       .map(
         (r, i) =>
-          `<span><b style="background:${COLORS[i % COLORS.length]}"></b>${esc(r.name)} ${usd(r.amount)}</span>`,
+          `<span><b style="background:${SPLIT_GRADIENTS[i % SPLIT_GRADIENTS.length]}"></b>${esc(r.name)} ${usd(r.amount)}</span>`,
       )
       .join("") +
     (act.length > 6 ? `<span>+${act.length - 6} more</span>` : "");
@@ -229,7 +229,7 @@ async function reviewView(id) {
 
   const drawFallback = () => {
     $("#fallback").innerHTML =
-      `<div class="t-wrap"><table class="t"><thead><tr><th>Fund</th><th>Package</th><th>Score</th><th>Amount</th><th>Why</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td><input type="checkbox" data-i="${i}" ${r.include ? "checked" : ""}></td><td>${esc(r.name)}<div class="muted small">${esc(r.repo)}</div></td><td>${r.score}</td><td><input type="text" data-a="${i}" value="${Number(r.amount).toFixed(2)}" style="width:90px"></td><td>${esc(r.reason)}${r.risk ? `<div class="err small">${esc(r.risk)}</div>` : ""}</td></tr>`).join("")}</tbody></table></div>`;
+      `<div class="t-wrap"><table class="t"><thead><tr><th>Fund</th><th>Package</th><th>Score</th><th>Amount</th><th>Risk flags</th><th>Why</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td><input type="checkbox" data-i="${i}" ${r.include ? "checked" : ""}></td><td>${esc(r.name)}<div class="muted small">${esc(r.repo)}</div></td><td>${r.score}</td><td><input type="text" data-a="${i}" value="${Number(r.amount).toFixed(2)}" style="width:90px"></td><td>${r.risk ? `<span class="err small">${esc(r.risk)}</span>` : '<span class="muted small">None detected</span>'}</td><td>${esc(r.reason)}</td></tr>`).join("")}</tbody></table></div>`;
     $("#fallback").onchange = (e) => {
       const t = e.target;
       if (t.dataset.i != null) rows[t.dataset.i].include = t.checked;
@@ -299,7 +299,12 @@ async function reviewView(id) {
             width: 190,
             wrapText: true,
             autoHeight: true,
-            cellStyle: { color: "#b53a24", lineHeight: "1.35" },
+            valueFormatter: (p) =>
+              p.node.rowPinned ? "" : p.value || "None detected",
+            cellStyle: (p) => ({
+              color: p.value ? "#b53a24" : "var(--muted)",
+              lineHeight: "1.35",
+            }),
           },
           {
             field: "reason",
