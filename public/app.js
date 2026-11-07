@@ -1,4 +1,4 @@
-// Upstream front end: dependency-free hash-routed SPA. AG Grid (CDN) renders the review table.
+// SourceKind front end: dependency-free hash-routed SPA. AG Grid (CDN) renders the review table.
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) =>
   String(s ?? "").replace(
@@ -103,7 +103,7 @@ window.addEventListener("hashchange", render);
 function homeView() {
   app.innerHTML = `
   <section class="hero">
-    <h1>Pay the people upstream.</h1>
+    <h1>Pay the people behind your dependencies.</h1>
     <p class="lede">Paste your project. ${esc(CFG.appName)} splits a monthly budget across the open-source maintainers it depends on, explains every share, and pays them through PayPal, including maintainers who never signed up for sponsorship.</p>
     <form class="scan panel" id="scan">
       <fieldset class="chips" aria-label="Input type"><label><input type="radio" name="mode" value="repo" checked><span>GitHub repo</span></label><label><input type="radio" name="mode" value="pkg"><span>Paste package.json</span></label></fieldset>
@@ -466,7 +466,24 @@ async function pledgeView(id) {
 async function ledgerView() {
   const rows = await api("/api/ledger");
   app.innerHTML = `<h2>Public ledger</h2><p class="muted">Every allocation with its PayPal payout batch, item and transaction ids, so anyone can check where the money went.</p>
-  ${rows.length ? `<div class="t-wrap"><table class="t"><thead><tr><th>When</th><th>Package</th><th>Maintainer</th><th>Amount</th><th>Status</th><th>Batch</th><th>Item</th><th>Transaction</th></tr></thead><tbody>${rows.map((r) => `<tr><td>${new Date(r.at).toLocaleDateString()}</td><td>${esc(r.pkg)}</td><td>${esc(r.owner)}</td><td>${usd(r.amount)}</td><td>${pill(r.status)}</td><td>${short(r.batchId)}</td><td>${short(r.itemId)}</td><td>${short(r.transactionId)}</td></tr>`).join("")}</tbody></table></div>` : '<div class="panel"><p>Nothing here yet. Allocations appear after the first subscription charge.</p><a class="btn" href="#/">Start a pledge</a></div>'}`;
+  ${rows.length ? `<div class="t-wrap"><table class="t"><thead><tr><th>When</th><th>Package</th><th>Maintainer</th><th>Amount</th><th>Status</th><th>Batch</th><th>Item</th><th>Transaction</th><th>Contributor badge</th></tr></thead><tbody>${rows.map((r) => {
+    const badgeUrl = `${location.origin}/badge/${encodeURIComponent(r.pledgeId)}.svg`;
+    const pledgeUrl = `${location.origin}/#/pledge/${encodeURIComponent(r.pledgeId)}`;
+    const markdown = `[![SourceKind: payments to maintainers](${badgeUrl})](${pledgeUrl})`;
+    return `<tr><td>${new Date(r.at).toLocaleDateString()}</td><td>${esc(r.pkg)}</td><td>${esc(r.owner)}</td><td>${usd(r.amount)}</td><td>${pill(r.status)}</td><td>${short(r.batchId)}</td><td>${short(r.itemId)}</td><td>${short(r.transactionId)}</td><td><a href="${esc(badgeUrl)}" target="_blank" rel="noopener"><img src="${esc(badgeUrl)}" alt="SourceKind payments badge"></a><br><button class="btn ghost small" type="button" data-badge-markdown="${esc(markdown)}">Copy badge Markdown</button></td></tr>`;
+  }).join("")}</tbody></table></div>` : '<div class="panel"><p>Nothing here yet. Allocations appear after the first subscription charge.</p><a class="btn" href="#/">Start a pledge</a></div>'}`;
+  app.querySelectorAll("[data-badge-markdown]").forEach((button) => {
+    button.onclick = async () => {
+      const markdown = button.dataset.badgeMarkdown;
+      try {
+        if (!navigator.clipboard?.writeText) throw new Error("Clipboard access is unavailable.");
+        await navigator.clipboard.writeText(markdown);
+        button.textContent = "Copied!";
+      } catch {
+        window.prompt("Copy this badge Markdown for your public profile:", markdown);
+      }
+    };
+  });
 }
 
 // ---------- Maintainer claim ----------

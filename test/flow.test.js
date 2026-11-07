@@ -137,6 +137,9 @@ test('payout webhooks drive status: succeeded, then returned money rolls over', 
   assert.equal(a.status, 'paid'); assert.equal(a.transactionId, 'TX-1');
   const payoutState = await api('/api/claim/state', undefined, state.claimCookie);
   assert.ok(payoutState.json.payouts.some(p => p.status === 'paid' && p.transactionId === 'TX-1'));
+  const badge = await fetch(`${base}/badge/${state.pledge}.svg`).then(r => r.text());
+  const impact = (await api(`/api/impact/${state.pledge}`)).json;
+  assert.match(badge, new RegExp(`\\$${impact.paid.toFixed(2)} paid to maintainers`));
   // A second maintainer claims, then PayPal reports the payout as returned
   const cookie = await maintainerCookie('maria');
   await api('/api/claim', { email: 'maria@example.com' }, cookie);
@@ -156,6 +159,25 @@ test('next cycle includes the rolled-over money', async () => {
   assert.ok(Math.abs(c2 - (20 + before.carryover)) < 0.02); assert.equal(v.carryover, 0);
 });
 
+test('agent answers dependency and payment questions from the current pledge', async () => {
+  const dependencies = (await api('/api/agent', {
+    pledgeId: state.pledge,
+    message: 'Which dependencies are funded?',
+  })).json;
+  assert.match(dependencies.reply, /solo-lib/);
+  assert.match(dependencies.reply, /team-lib/);
+  assert.match(dependencies.reply, /tiny-util/);
+  assert.doesNotMatch(dependencies.reply, /cannot see/i);
+
+  const payments = (await api('/api/agent', {
+    pledgeId: state.pledge,
+    message: 'What is the status of my payments?',
+  })).json;
+  assert.match(payments.reply, /pending\/in flight/i);
+  assert.match(payments.reply, /solo-lib/);
+  assert.doesNotMatch(payments.reply, /cannot see/i);
+});
+
 test('agent: write actions need confirmation, then call PayPal', async () => {
   const r = (await api('/api/agent', { pledgeId: state.pledge, message: 'please refund the unclaimed money' })).json;
   assert.equal(r.actions.length, 1); assert.equal(r.actions[0].status, 'pending');
@@ -168,7 +190,9 @@ test('agent: write actions need confirmation, then call PayPal', async () => {
 });
 
 test('ledger, impact and badge are public', async () => {
-  assert.ok((await api('/api/ledger')).json.length > 0);
+  const ledger = (await api('/api/ledger')).json;
+  assert.ok(ledger.length > 0);
+  assert.ok(ledger.some(row => row.pledgeId === state.pledge));
   assert.ok((await api(`/api/impact/${state.pledge}`)).json.total >= 40);
   const svg = await fetch(`${base}/badge/${state.pledge}.svg`).then(r => r.text()); assert.match(svg, /<svg/);
 });

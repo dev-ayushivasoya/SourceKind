@@ -277,7 +277,7 @@ route("GET", "/auth/github/callback", async ({ query, res, sess }) => {
   const user = await fetch("https://api.github.com/user", {
     headers: {
       Authorization: `Bearer ${tok.access_token}`,
-      "User-Agent": "upstream-hackathon",
+      "User-Agent": "sourcekind-hackathon",
     },
   }).then((r) => r.json());
   if (!user.login) throw fail(400, "GitHub sign-in failed");
@@ -330,19 +330,22 @@ route("POST", "/api/dev/expire-held", async () => {
 
 // ---- Badge ----
 route("GET", "/badge/:file", async ({ params, res }) => {
-  const p = db.get("pledges", params.file.replace(/\.svg$/, ""));
-  const right = p
-    ? `$${p.tier}/mo to ${Object.keys(p.shares).length} projects`
-    : "fund them";
-  const left = "I fund my dependencies",
-    w1 = left.length * 6.4 + 16,
+  const id = params.file.replace(/\.svg$/, "");
+  const p = db.get("pledges", id);
+  const paid = p ? engine.impact(id).paid : 0;
+  const left = cfg.appName;
+  const right = `$${Number(paid).toFixed(2)} paid to maintainers`;
+  const xml = value => String(value).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;',
+  })[c]);
+  const w1 = left.length * 6.4 + 16,
     w2 = right.length * 6.4 + 16;
   res.writeHead(200, {
     "Content-Type": "image/svg+xml",
-    "Cache-Control": "max-age=300",
+    "Cache-Control": "public, max-age=60",
   });
   res.end(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${w1 + w2}" height="22" role="img" aria-label="${left}: ${right}"><rect width="${w1}" height="22" fill="#0c2b36"/><rect x="${w1}" width="${w2}" height="22" fill="#1d6f8f"/><g fill="#fff" font-family="Verdana,sans-serif" font-size="11"><text x="8" y="15">${left}</text><text x="${w1 + 8}" y="15">${right}</text></g></svg>`,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${w1 + w2}" height="22" role="img" aria-label="${xml(left)}: ${xml(right)}"><rect width="${w1}" height="22" fill="#0c2b36"/><rect x="${w1}" width="${w2}" height="22" fill="#1d6f8f"/><g fill="#fff" font-family="Verdana,sans-serif" font-size="11"><text x="8" y="15">${xml(left)}</text><text x="${w1 + 8}" y="15">${xml(right)}</text></g></svg>`,
   );
 });
 

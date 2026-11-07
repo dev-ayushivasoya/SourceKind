@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: upstream
+    name: sourcekind
     runtime: node
     plan: free
     buildCommand: "echo no build step"

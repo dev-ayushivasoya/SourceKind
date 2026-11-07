@@ -224,7 +224,7 @@ export function pledgeView(id) {
 }
 export function ledger() {
   return db.all('allocations').sort((a, b) => b.createdAt - a.createdAt).slice(0, 300).map(a => ({
-    pkg: a.pkg, repo: a.repo, owner: a.owner, amount: a.amount, cycle: a.cycle, status: a.status, paypalStatus: a.paypalStatus || null,
+    pkg: a.pkg, repo: a.repo, owner: a.owner, amount: a.amount, cycle: a.cycle, status: a.status, paypalStatus: a.paypalStatus || null, pledgeId: a.pledgeId,
     batchId: a.payoutBatchId, itemId: a.payoutItemId, transactionId: a.transactionId, at: a.createdAt,
   }));
 }

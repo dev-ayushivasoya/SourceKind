@@ -2,15 +2,123 @@ import { cfg } from './config.js';
 
 export const llmEnabled = () => !!cfg.llm.key;
 
+function openRouterMessages(body) {
+  const messages = [];
+  if (body.system) messages.push({ role: 'system', content: body.system });
+  for (const message of body.messages || []) {
+    if (message.role === 'user' && Array.isArray(message.content)) {
+      const results = message.content.filter(block => block.type === 'tool_result');
+      if (results.length) {
+        for (const result of results) {
+          messages.push({
+            role: 'tool',
+            tool_call_id: result.tool_use_id,
+            content: typeof result.content === 'string'
+              ? result.content
+              : JSON.stringify(result.content),
+          });
+        }
+        continue;
+      }
+    }
+    if (message.role === 'assistant' && Array.isArray(message.content)) {
+      const text = message.content
+        .filter(block => block.type === 'text')
+        .map(block => block.text)
+        .join('');
+      const toolCalls = message.content
+        .filter(block => block.type === 'tool_use')
+        .map(block => ({
+          id: block.id,
+          type: 'function',
+          function: {
+            name: block.name,
+            arguments: JSON.stringify(block.input || {}),
+          },
+        }));
+      messages.push({
+        role: 'assistant',
+        ...(text ? { content: text } : { content: null }),
+        ...(toolCalls.length ? { tool_calls: toolCalls } : {}),
+      });
+      continue;
+    }
+    messages.push({
+      role: message.role,
+      content: typeof message.content === 'string'
+        ? message.content
+        : JSON.stringify(message.content),
+    });
+  }
+  return messages;
+}
+
+function openRouterResponse(json) {
+  const choice = json.choices?.[0];
+  if (!choice) return { content: [], stop_reason: 'end_turn' };
+  const content = [];
+  if (typeof choice.message?.content === 'string' && choice.message.content)
+    content.push({ type: 'text', text: choice.message.content });
+  for (const toolCall of choice.message?.tool_calls || []) {
+    let input = {};
+    try {
+      input = JSON.parse(toolCall.function?.arguments || '{}');
+    } catch {
+      input = {};
+    }
+    content.push({
+      type: 'tool_use',
+      id: toolCall.id,
+      name: toolCall.function?.name,
+      input,
+    });
+  }
+  return {
+    content,
+    stop_reason: choice.finish_reason === 'tool_calls' ? 'tool_use' : 'end_turn',
+  };
+}
+
 export async function llmRaw(body) {
+  const openRouter = cfg.llm.provider === 'openrouter';
+  const headers = openRouter
+    ? {
+      Authorization: `Bearer ${cfg.llm.key}`,
+      'HTTP-Referer': cfg.baseUrl,
+      'X-Title': cfg.appName,
+      'Content-Type': 'application/json',
+    }
+    : {
+      'x-api-key': cfg.llm.key,
+      'anthropic-version': '2023-06-01',
+      'content-type': 'application/json',
+    };
+  const request = openRouter
+    ? {
+      model: cfg.llm.model,
+      max_tokens: 1500,
+      messages: openRouterMessages(body),
+      ...(body.tools ? {
+        tools: body.tools.map(tool => ({
+          type: 'function',
+          function: {
+            name: tool.name,
+            description: tool.description,
+            parameters: tool.input_schema,
+          },
+        })),
+        tool_choice: 'auto',
+      } : {}),
+    }
+    : { model: cfg.llm.model, max_tokens: 1500, ...body };
   const res = await fetch(cfg.llm.url, {
     method: 'POST',
-    headers: { 'x-api-key': cfg.llm.key, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
-    body: JSON.stringify({ model: cfg.llm.model, max_tokens: 1500, ...body }),
+    headers,
+    body: JSON.stringify(request),
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(`LLM request failed (${res.status}): ${json?.error?.message || 'error'}`);
-  return json;
+  return openRouter ? openRouterResponse(json) : json;
 }
 async function llmText(system, user) {
   const out = await llmRaw({ system, messages: [{ role: 'user', content: user }] });

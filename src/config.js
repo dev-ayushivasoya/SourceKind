@@ -14,11 +14,32 @@ try {
 const e = process.env;
 const bool = (v, d = false) => (v === undefined || v === '' ? d : /^(1|true|yes)$/i.test(v));
 const num = (v, d) => (v === undefined || v === '' || isNaN(+v) ? d : +v);
+const llmModelSetting = e.LLM_MODEL || '';
+const modelUrl = (() => {
+  try {
+    const url = new URL(llmModelSetting);
+    return url.hostname === 'openrouter.ai'
+      ? url.pathname.split('/').filter(Boolean).join('/')
+      : '';
+  } catch {
+    return '';
+  }
+})();
+const llmProvider = (e.LLM_PROVIDER || (
+  e.OPENROUTER_API_KEY ||
+  (e.ANTHROPIC_API_KEY || '').startsWith('sk-or-') ||
+  modelUrl
+    ? 'openrouter'
+    : 'anthropic'
+)).toLowerCase();
+const llmKey = llmProvider === 'openrouter'
+  ? e.OPENROUTER_API_KEY || e.ANTHROPIC_API_KEY || ''
+  : e.ANTHROPIC_API_KEY || '';
 
 export const cfg = {
   port: num(e.PORT, 3000),
   baseUrl: (e.BASE_URL || `http://localhost:${num(e.PORT, 3000)}`).replace(/\/$/, ''),
-  appName: e.APP_NAME || 'Upstream',
+  appName: e.APP_NAME || 'SourceKind',
   dataDir: path.resolve(e.DATA_DIR || './data'),
   paypal: {
     clientId: e.PAYPAL_CLIENT_ID || '',
@@ -28,7 +49,14 @@ export const cfg = {
     web: (e.PAYPAL_WEB || 'https://www.sandbox.paypal.com').replace(/\/$/, ''),
     planIds: (() => { try { return JSON.parse(e.PAYPAL_PLAN_IDS || '{}'); } catch { return {}; } })(),
   },
-  llm: { key: e.ANTHROPIC_API_KEY || '', model: e.LLM_MODEL || 'claude-sonnet-5-5', url: e.LLM_URL || 'https://api.anthropic.com/v1/messages' },
+  llm: {
+    provider: llmProvider,
+    key: llmKey,
+    model: modelUrl || llmModelSetting || (llmProvider === 'openrouter' ? 'anthropic/claude-sonnet-5.5' : 'claude-sonnet-5-5'),
+    url: e.LLM_URL || (llmProvider === 'openrouter'
+      ? 'https://openrouter.ai/api/v1/chat/completions'
+      : 'https://api.anthropic.com/v1/messages'),
+  },
   github: { token: e.GITHUB_TOKEN || '', clientId: e.GITHUB_CLIENT_ID || '', clientSecret: e.GITHUB_CLIENT_SECRET || '' },
   claimDemo: bool(e.CLAIM_DEMO_MODE, true),
   devTools: bool(e.DEV_TOOLS, false),

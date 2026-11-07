@@ -1,6 +1,6 @@
 # SourceKind: pay the people your code runs on
 
-> Built for the **PayPal AI Hackathon** (Devpost). Working name "SourceKind": change it with `APP_NAME` in `.env`.
+> Built for the **PayPal AI Hackathon** (Devpost). Set `APP_NAME` in `.env` to customize the displayed brand.
 
 Open-source libraries are often kept alive by one or two unpaid maintainers. GitHub Sponsors lets you fund them, but only if the maintainer has enrolled, and you still have to choose every amount yourself.
 
@@ -16,7 +16,7 @@ Open-source libraries are often kept alive by one or two unpaid maintainers. Git
 | Trust | Every webhook is verified with `verify-webhook-signature`; events are idempotent and retry-safe | `verifyWebhook`, `/api/webhooks/paypal` |
 | Maintainer identity | **Login with PayPal** (confirms the payee) + GitHub OAuth (proves they own the project) | `/auth/paypal`, `/auth/github` |
 | Records | **Invoicing API**: a receipt invoice per cycle; **Refunds API** for unpaid money | `issueInvoice`, `refundSale` |
-| Proof | The public ledger shows PayPal batch / item / transaction ids | `/#/ledger` |
+| Proof | The public ledger shows PayPal batch / item / transaction ids and offers a copyable public badge for contributor profiles; the badge reports payouts confirmed as paid | `/#/ledger`, `/badge/<pledge-id>.svg` |
 
 ## What the AI does
 
@@ -24,7 +24,7 @@ The AI never decides money. Amounts come from a deterministic scoring engine (`s
 
 1. **Explainer**: writes a plain-language reason for every share and adds risk notes (one batched call, strict JSON, validated; falls back to templates if the model fails).
 2. **Risk flagger**: rules + AI notes for archived/deprecated packages and look-alike (typo-squat) names.
-3. **Agent**: a tool-using agent (Claude tool use) that can check status, draft claim reminders, **issue a PayPal invoice, refund unclaimed money, or cancel the subscription**. Anything that changes money is only *proposed*; the funder must press **Confirm**.
+3. **Agent**: answers questions about the current pledge, its dependencies, and payout statuses; it can also draft claim reminders, **issue a PayPal invoice, refund unclaimed money, or cancel the subscription**. Anything that changes money is only *proposed*; the funder must press **Confirm**.
 4. **Outreach writer**: drafts the message to maintainers whose money is waiting.
 
 No API key? Everything still works with built-in rule-based explanations and a rule-based agent.
@@ -48,6 +48,12 @@ cp .env.example .env        # Windows: copy .env.example .env
 # fill in PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET (and ANTHROPIC_API_KEY if you have one)
 npm start                   # opens on http://localhost:3000
 ```
+
+For AI, use an Anthropic API key in `ANTHROPIC_API_KEY`, or an OpenRouter key in
+`OPENROUTER_API_KEY`. OpenRouter keys are also auto-detected if they were placed
+in `ANTHROPIC_API_KEY`. Set `LLM_MODEL` to a model ID (for example
+`anthropic/claude-sonnet-5.5` for OpenRouter), not a URL. Restart the server
+after changing `.env`.
 
 ### 1. PayPal sandbox setup (about 10 minutes)
 

@@ -1,7 +1,7 @@
 {
-  "name": "upstream",
+  "name": "sourcekind",
   "version": "1.0.0",
-  "description": "Upstream: fund the open-source maintainers your project depends on, powered by PayPal Subscriptions, Payouts, Webhooks, Invoicing and an AI agent.",
+  "description": "SourceKind: fund the open-source maintainers your project depends on, powered by PayPal Subscriptions, Payouts, Webhooks, Invoicing and an AI agent.",
   "type": "module",
   "license": "MIT",
   "engines": { "node": ">=18.17" },

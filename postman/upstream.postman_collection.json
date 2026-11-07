@@ -1,6 +1,6 @@
 {
   "info": {
-    "name": "Upstream API",
+    "name": "SourceKind API",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": "Scan, pledge, claim, webhook and agent endpoints. Run in order: Scan saves scanId, Create pledge saves pledgeId."
   },
