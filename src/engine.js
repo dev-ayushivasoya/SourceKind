@@ -361,6 +361,42 @@ export function expireHeld() {
   return n;
 }
 
+// Fallback for when webhooks can't reach us (e.g. localhost): ask PayPal directly.
+const ITEM_STATUS = { SUCCESS: "SUCCEEDED", ONHOLD: "HELD" };
+export async function syncPayouts() {
+  const sent = db.filter(
+    "allocations",
+    (a) => a.status === "sent" && a.payoutBatchId,
+  );
+  let n = 0;
+  for (const batchId of new Set(sent.map((a) => a.payoutBatchId))) {
+    let out;
+    try {
+      out = await pay.getPayoutBatch(batchId);
+    } catch (err) {
+      console.warn("payout sync skipped:", err.message);
+      continue;
+    }
+    for (const it of out.items || []) {
+      const raw = String(it.transaction_status || "").toUpperCase();
+      if (!raw || raw === "PENDING") continue;
+      const status = ITEM_STATUS[raw] || raw;
+      await handleEvent({
+        id: `sync_${it.payout_item_id}_${status}`,
+        event_type: `PAYMENT.PAYOUTS-ITEM.${status}`,
+        resource: {
+          payout_item_id: it.payout_item_id,
+          payout_batch_id: it.payout_batch_id || batchId,
+          transaction_id: it.transaction_id,
+          sender_item_id: it.payout_item?.sender_item_id,
+        },
+      });
+      n++;
+    }
+  }
+  return n;
+}
+
 // ---------- Webhook router: PayPal events drive every state change ----------
 export async function handleEvent(ev) {
   if (!ev?.id || !ev.event_type) return { ignored: true };

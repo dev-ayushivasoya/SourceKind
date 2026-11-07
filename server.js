@@ -349,9 +349,18 @@ route("GET", "/badge/:file", async ({ params, res }) => {
   const paid = p ? engine.impact(id).paid : 0;
   const left = cfg.appName;
   const right = `$${Number(paid).toFixed(2)} paid to maintainers`;
-  const xml = value => String(value).replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;',
-  })[c]);
+  const xml = (value) =>
+    String(value).replace(
+      /[&<>"']/g,
+      (c) =>
+        ({
+          "&": "&amp;",
+          "<": "&lt;",
+          ">": "&gt;",
+          '"': "&quot;",
+          "'": "&apos;",
+        })[c],
+    );
   const w1 = left.length * 6.4 + 16,
     w2 = right.length * 6.4 + 16;
   res.writeHead(200, {
@@ -433,4 +442,11 @@ if (
     const n = engine.expireHeld();
     if (n) console.log(`rolled over ${n} unclaimed allocations`);
   }, 3600e3).unref();
+  const syncNow = () =>
+    engine
+      .syncPayouts()
+      .then((n) => n && console.log(`synced ${n} payout update(s) from PayPal`))
+      .catch(() => {});
+  setInterval(syncNow, 30e3).unref();
+  syncNow();
 }
