@@ -55,7 +55,7 @@ export async function createScan({ repoUrl, packageJson, budget }) {
 }
 
 // ---------- Step 2: user edits the table, then starts a PayPal subscription ----------
-export async function createPledge({ scanId, amounts, tier, email }) {
+export async function createPledge({ scanId, amounts, tier, email, userId }) {
   const scan = db.get("scans", scanId);
   if (!scan) throw new Error("Scan not found. Run the scan again.");
   if (!cfg.tiers.includes(Number(tier)))
@@ -100,6 +100,7 @@ export async function createPledge({ scanId, amounts, tier, email }) {
     source: scan.source,
     tier: Number(tier),
     email: email || "",
+    userId: userId || null,
     shares,
     packages: Object.fromEntries(
       chosen.map((p) => [

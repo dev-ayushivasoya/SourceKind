@@ -52,7 +52,7 @@ function setupNav() {
   document.getElementById("nav").innerHTML =
     me.role === "maintainer"
       ? '<a href="#/claim">Claim your funding</a><a href="#" id="signout">Sign out</a>'
-      : '<a href="#/ledger">Public ledger</a><a href="#" id="signout">Sign out</a>';
+      : '<a href="#/mine">My pledges</a><a href="#/ledger">Public ledger</a><a href="#" id="signout">Sign out</a>';
   document.getElementById("signout").onclick = async (e) => {
     e.preventDefault();
     await fetch("/api/auth/logout", { method: "POST" });
@@ -89,6 +89,7 @@ async function render() {
     if (name === "review") await reviewView(arg);
     else if (name === "pledge") await pledgeView(arg);
     else if (name === "ledger") await ledgerView();
+    else if (name === "mine") await mineView();
     else if (name === "claim") await claimView(q);
     else homeView();
   } catch (err) {
@@ -98,6 +99,16 @@ async function render() {
   window.scrollTo(0, 0);
 }
 window.addEventListener("hashchange", render);
+
+// ---------- My pledges ----------
+async function mineView() {
+  const list = await api("/api/my/pledges");
+  app.innerHTML =
+    "<h2>My pledges</h2>" +
+    (list.length
+      ? `<div class="cards">${list.map((p) => `<a class="card" style="text-decoration:none;color:inherit" href="#/pledge/${esc(p.id)}"><strong>${usd(p.tier)} per month</strong><div>${esc(p.source)}</div><div class="muted small">${esc(p.status)} · ${p.cycles} cycle${p.cycles === 1 ? "" : "s"} run</div></a>`).join("")}</div>`
+      : '<div class="panel"><p>No pledges yet. <a href="#/">Scan a project</a> and fund it, and it will show up here.</p></div>');
+}
 
 // ---------- Home ----------
 function homeView() {
@@ -110,7 +121,7 @@ function homeView() {
       <div id="repoBox"><label for="repoUrl">Repository URL</label><input type="text" id="repoUrl" name="repoUrl" placeholder="https://github.com/owner/repo" autocomplete="off"></div>
       <div id="pkgBox" hidden><label for="pkgJson">package.json contents</label><textarea id="pkgJson" name="packageJson" placeholder='{ "dependencies": { "express": "^4.19.0" } }'></textarea></div>
       <fieldset class="chips"><legend>Monthly budget</legend>${CFG.tiers.map((t, i) => `<label><input type="radio" name="budget" value="${t}" ${i === 1 ? "checked" : ""}><span>$${t}</span></label>`).join("")}</fieldset>
-      <div class="row"><button class="btn" id="scanBtn">Scan dependencies</button><span class="muted small" id="scanMsg"></span></div>
+      <div class="row"><button class="btn" id="scanBtn">Scan dependencies</button><a class="btn ghost" href="#/mine">View my existing pledges</a><span class="muted small" id="scanMsg"></span></div>
       <div class="err" id="scanErr" role="alert"></div>
     </form>
   </section>
@@ -471,21 +482,31 @@ async function pledgeView(id) {
 async function ledgerView() {
   const rows = await api("/api/ledger");
   app.innerHTML = `<h2>Public ledger</h2><p class="muted">Every allocation with its PayPal payout batch, item and transaction ids, so anyone can check where the money went.</p>
-  ${rows.length ? `<div class="t-wrap"><table class="t"><thead><tr><th>When</th><th>Package</th><th>Maintainer</th><th>Amount</th><th>Status</th><th>Batch</th><th>Item</th><th>Transaction</th><th>Contributor badge</th></tr></thead><tbody>${rows.map((r) => {
-    const badgeUrl = `${location.origin}/badge/${encodeURIComponent(r.pledgeId)}.svg`;
-    const pledgeUrl = `${location.origin}/#/pledge/${encodeURIComponent(r.pledgeId)}`;
-    const markdown = `[![SourceKind: payments to maintainers](${badgeUrl})](${pledgeUrl})`;
-    return `<tr><td>${new Date(r.at).toLocaleDateString()}</td><td>${esc(r.pkg)}</td><td>${esc(r.owner)}</td><td>${usd(r.amount)}</td><td>${pill(r.status)}</td><td>${short(r.batchId)}</td><td>${short(r.itemId)}</td><td>${short(r.transactionId)}</td><td><a href="${esc(badgeUrl)}" target="_blank" rel="noopener"><img src="${esc(badgeUrl)}" alt="SourceKind payments badge"></a><br><button class="btn ghost small" type="button" data-badge-markdown="${esc(markdown)}">Copy badge Markdown</button></td></tr>`;
-  }).join("")}</tbody></table></div>` : '<div class="panel"><p>Nothing here yet. Allocations appear after the first subscription charge.</p><a class="btn" href="#/">Start a pledge</a></div>'}`;
+  ${
+    rows.length
+      ? `<div class="t-wrap"><table class="t"><thead><tr><th>When</th><th>Package</th><th>Maintainer</th><th>Amount</th><th>Status</th><th>Batch</th><th>Item</th><th>Transaction</th><th>Contributor badge</th></tr></thead><tbody>${rows
+          .map((r) => {
+            const badgeUrl = `${location.origin}/badge/${encodeURIComponent(r.pledgeId)}.svg`;
+            const pledgeUrl = `${location.origin}/#/pledge/${encodeURIComponent(r.pledgeId)}`;
+            const markdown = `[![SourceKind: payments to maintainers](${badgeUrl})](${pledgeUrl})`;
+            return `<tr><td>${new Date(r.at).toLocaleDateString()}</td><td>${esc(r.pkg)}</td><td>${esc(r.owner)}</td><td>${usd(r.amount)}</td><td>${pill(r.status)}</td><td>${short(r.batchId)}</td><td>${short(r.itemId)}</td><td>${short(r.transactionId)}</td><td><a href="${esc(badgeUrl)}" target="_blank" rel="noopener"><img src="${esc(badgeUrl)}" alt="SourceKind payments badge"></a><br><button class="btn ghost small" type="button" data-badge-markdown="${esc(markdown)}">Copy badge Markdown</button></td></tr>`;
+          })
+          .join("")}</tbody></table></div>`
+      : '<div class="panel"><p>Nothing here yet. Allocations appear after the first subscription charge.</p><a class="btn" href="#/">Start a pledge</a></div>'
+  }`;
   app.querySelectorAll("[data-badge-markdown]").forEach((button) => {
     button.onclick = async () => {
       const markdown = button.dataset.badgeMarkdown;
       try {
-        if (!navigator.clipboard?.writeText) throw new Error("Clipboard access is unavailable.");
+        if (!navigator.clipboard?.writeText)
+          throw new Error("Clipboard access is unavailable.");
         await navigator.clipboard.writeText(markdown);
         button.textContent = "Copied!";
       } catch {
-        window.prompt("Copy this badge Markdown for your public profile:", markdown);
+        window.prompt(
+          "Copy this badge Markdown for your public profile:",
+          markdown,
+        );
       }
     };
   });
@@ -509,7 +530,10 @@ async function claimView(q) {
     ["held", "queued", "sent", "unclaimed", "on_hold"].includes(p.status),
   );
   const otherPayouts = s.payouts.filter(
-    (p) => !["paid", "held", "queued", "sent", "unclaimed", "on_hold"].includes(p.status),
+    (p) =>
+      !["paid", "held", "queued", "sent", "unclaimed", "on_hold"].includes(
+        p.status,
+      ),
   );
   app.innerHTML = `<h2>Maintainers: claim your funding</h2>
   <p class="lede">If someone who uses your project set money aside for you, claim it here. Prove you maintain the project with GitHub, tell PayPal where to send it, and the payout goes out in one batch.</p>
@@ -552,7 +576,9 @@ async function claimView(q) {
         button.classList.toggle("ghost", !selected);
       });
       $("#payout-panel").setAttribute("aria-labelledby", tab.id);
-      $("#payout-panel").innerHTML = payoutRows(payoutTabs[tab.dataset.payoutTab]);
+      $("#payout-panel").innerHTML = payoutRows(
+        payoutTabs[tab.dataset.payoutTab],
+      );
     };
   });
   $("#claim").onclick = async () => {

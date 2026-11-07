@@ -128,14 +128,17 @@ route(
       throw fail(404, "Scan not found");
     })(),
 );
-route("POST", "/api/pledges", async ({ body }) => {
+route("POST", "/api/pledges", async ({ body, sess }) => {
   if (!pay.configured())
     throw fail(
       503,
       "PayPal credentials are not set. Add PAYPAL_CLIENT_ID and PAYPAL_CLIENT_SECRET to .env and restart.",
     );
   try {
-    const { pledge, approveUrl } = await engine.createPledge(body);
+    const { pledge, approveUrl } = await engine.createPledge({
+      ...body,
+      userId: sess.userId,
+    });
     return { id: pledge.id, approveUrl };
   } catch (e) {
     throw fail(e.status && e.status < 500 ? 400 : 502, e.message);
@@ -160,6 +163,26 @@ route(
     })(),
 );
 route("GET", "/api/ledger", async () => engine.ledger());
+route("GET", "/api/my/pledges", async ({ sess }) => {
+  if (!sess.userId) throw fail(401, "Sign in first.");
+  const user = db.get("users", sess.userId);
+  const mail = (user?.email || "").toLowerCase();
+  return db
+    .filter(
+      "pledges",
+      (p) =>
+        p.userId === sess.userId ||
+        (mail && (p.email || "").toLowerCase() === mail),
+    )
+    .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+    .map((p) => ({
+      id: p.id,
+      source: p.source,
+      tier: p.tier,
+      status: p.status,
+      cycles: p.cycles || 0,
+    }));
+});
 route("GET", "/api/subscription/return", async ({ query, res }) => {
   const id = query.get("pledge");
   const p = db.get("pledges", id);
