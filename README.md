@@ -1,38 +1,35 @@
 # SourceKind: pay the people your code runs on
 
-> Built for the **PayPal AI Hackathon** (Devpost). Set `APP_NAME` in `.env` to customize the displayed brand.
-
 Open-source libraries are often kept alive by one or two unpaid maintainers. GitHub Sponsors lets you fund them, but only if the maintainer has enrolled, and you still have to choose every amount yourself.
 
-**SourceKind** takes a repo (or a `package.json`) and a monthly budget, scores each dependency, proposes a fair split, explains every share, and pays the maintainers through **PayPal**. Maintainers who have never signed up for anything get a claim link, and their money is held until they claim it.
+SourceKind takes a repo (or a `package.json`) and a monthly budget, scores each dependency, proposes a fair split, explains every share, and pays the maintainers through PayPal. Maintainers who have never signed up for anything get a claim link, and their money is held until they claim it.
 
 ## What PayPal does here (it is the engine, not a checkout button)
 
 | Part of the product | PayPal feature | Where in code |
 |---|---|---|
-| The monthly clock: a pledge **is** a PayPal subscription; each billing cycle triggers a re-scan and a payout batch | **Subscriptions API** (product, plan, subscription, cancel) + webhooks `BILLING.SUBSCRIPTION.*`, `PAYMENT.SALE.COMPLETED` | `src/paypal.js`, `src/engine.js` |
-| Paying maintainers in one batch | **Payouts API** (`PAYPAL_ID` or `EMAIL` recipients, idempotent `sender_batch_id`) | `sendPayoutBatch`, `payQueued` |
+| The monthly clock: a pledge is a PayPal subscription; each billing cycle triggers a re-scan and a payout batch | Subscriptions API (product, plan, subscription, cancel) + webhooks `BILLING.SUBSCRIPTION.*`, `PAYMENT.SALE.COMPLETED` | `src/paypal.js`, `src/engine.js` |
+| Paying maintainers in one batch | Payouts API (`PAYPAL_ID` or `EMAIL` recipients, idempotent `sender_batch_id`) | `sendPayoutBatch`, `payQueued` |
 | Where the money is | Payout item webhooks (`SUCCEEDED`, `UNCLAIMED`, `RETURNED`, `FAILED`, `BLOCKED`, `HELD`...) drive a state machine: paid, waiting, or **rolled over** into the next cycle | `handleEvent` in `src/engine.js` |
 | Trust | Every webhook is verified with `verify-webhook-signature`; events are idempotent and retry-safe | `verifyWebhook`, `/api/webhooks/paypal` |
-| Maintainer identity | **Login with PayPal** (confirms the payee) + GitHub OAuth (proves they own the project) | `/auth/paypal`, `/auth/github` |
-| Records | **Invoicing API**: a receipt invoice per cycle; **Refunds API** for unpaid money | `issueInvoice`, `refundSale` |
+| Maintainer identity | Login with PayPal (confirms the payee) + GitHub OAuth (proves they own the project) | `/auth/paypal`, `/auth/github` |
+| Records | Invoicing API: a receipt invoice per cycle; Refunds API for unpaid money | `issueInvoice`, `refundSale` |
 | Proof | The public ledger shows PayPal batch / item / transaction ids and offers a copyable public badge for contributor profiles; the badge reports payouts confirmed as paid | `/#/ledger`, `/badge/<pledge-id>.svg` |
 
 ## What the AI does
 
 The AI never decides money. Amounts come from a deterministic scoring engine (`src/scoring.js`: need 40%, importance 30%, reach 20%, health 10%).
 
-1. **Explainer**: writes a plain-language reason for every share and adds risk notes (one batched call, strict JSON, validated; falls back to templates if the model fails).
-2. **Risk flagger**: rules + AI notes for archived/deprecated packages and look-alike (typo-squat) names.
-3. **Agent**: answers questions about the current pledge, its dependencies, and payout statuses; it can also draft claim reminders, **issue a PayPal invoice, refund unclaimed money, or cancel the subscription**. Anything that changes money is only *proposed*; the funder must press **Confirm**.
-4. **Outreach writer**: drafts the message to maintainers whose money is waiting.
+1. Explainer: writes a plain-language reason for every share and adds risk notes (one batched call, strict JSON, validated; falls back to templates if the model fails).
+2. Risk flagger: rules + AI notes for archived/deprecated packages and look-alike (typo-squat) names.
+3. Agent: answers questions about the current pledge, its dependencies, and payout statuses; it can also draft claim reminders, issue a PayPal invoice, refund unclaimed money, or cancel the subscription. Anything that changes money is only proposed; the funder must press Confirm.
+4. Outreach writer: drafts the message to maintainers whose money is waiting.
 
 No API key? Everything still works with built-in rule-based explanations and a rule-based agent.
 
 ## Sponsor tools
 
 - **AG Grid Community**: the editable review table (`public/app.js`, loaded from jsDelivr). Falls back to a plain table if the CDN is unreachable.
-- **Render**: deploy config in `render.yaml` (see below).
 - **Postman**: ready-made collection in `postman/upstream.postman_collection.json`.
 
 ## Features
@@ -55,7 +52,7 @@ in `ANTHROPIC_API_KEY`. Set `LLM_MODEL` to a model ID (for example
 `anthropic/claude-sonnet-5.5` for OpenRouter), not a URL. Restart the server
 after changing `.env`.
 
-### 1. PayPal sandbox setup (about 10 minutes)
+### 1. PayPal sandbox setup
 
 1. Go to <https://developer.paypal.com/dashboard/> and open **Apps & Credentials → Sandbox**.
 2. Create an app (or use the default). Copy **Client ID** and **Secret** into `.env`.
@@ -66,7 +63,7 @@ after changing `.env`.
 5. **Webhooks**: PayPal can only call a public HTTPS URL. Deploy to Render (below) or run `ngrok http 3000`, set `BASE_URL` to that URL, then in your app's **Webhooks** section add `https://YOUR-URL/api/webhooks/paypal` with these events: `BILLING.SUBSCRIPTION.ACTIVATED`, `BILLING.SUBSCRIPTION.CANCELLED`, `BILLING.SUBSCRIPTION.SUSPENDED`, `BILLING.SUBSCRIPTION.EXPIRED`, `BILLING.SUBSCRIPTION.PAYMENT.FAILED`, `PAYMENT.SALE.COMPLETED`, and all `PAYMENT.PAYOUTS-ITEM.*` events. Copy the **Webhook ID** into `PAYPAL_WEBHOOK_ID`.
 6. Optional: `npm run setup:paypal` creates the product and the four plans ($5/$10/$20/$50) up front and prints `PAYPAL_PLAN_IDS` (otherwise they are created on first use).
 
-### 2. Run the demo (what judges will see)
+### 2. Run the demo
 
 1. Open the app, paste a public GitHub repo with a `package.json` (or paste one), choose a budget, **Scan**.
 2. Review the split in the table. Edit an amount, watch the bar update. Enter your email and click **Start ... with PayPal**.
@@ -78,13 +75,6 @@ after changing `.env`.
 > **Sandbox honesty note.** Maintainer accounts in the demo are PayPal sandbox test accounts, and "claim" uses sandbox demo mode (`CLAIM_DEMO_MODE=true`). For real verification set `CLAIM_DEMO_MODE=false`, configure maintainer GitHub sign-in (`LOGIN_GITHUB_CLIENT_ID/SECRET`, callback `BASE_URL/auth/login/github/callback`), and enable PayPal login with return URL `BASE_URL/auth/paypal/callback` in the PayPal app settings. Sign in as the maintainer first, then connect PayPal; the claim uses the signed-in GitHub handle automatically. Repos owned by organisations cannot be claimed in real mode yet.
 > "Run next cycle now" exists only because PayPal bills monthly; it calls the same payout code as the webhook path. Turn it off with `DEV_TOOLS=false`.
 
-## Deploy on Render (public demo URL)
-
-1. Push this repo to GitHub (public, MIT licensed).
-2. On <https://render.com> create a **Web Service** from the repo (or use the Blueprint via `render.yaml`). Build command: none. Start command: `node server.js`.
-3. Add the env vars from `.env.example` (at least `BASE_URL`, `PAYPAL_*`, optionally `ANTHROPIC_API_KEY`, `GITHUB_TOKEN`).
-4. Register `https://YOUR-SERVICE.onrender.com/api/webhooks/paypal` in the PayPal dashboard.
-5. Note: the free tier's disk is wiped on every deploy/restart (the app stores data in `data/db.json`), so create your demo pledge shortly before recording, or attach a Render disk and set `DATA_DIR`. If plans are lost, they are simply re-created; pin them with `PAYPAL_PLAN_IDS`.
 
 ## Architecture
 
