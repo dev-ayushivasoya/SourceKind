@@ -52,18 +52,8 @@ in `ANTHROPIC_API_KEY`. Set `LLM_MODEL` to a model ID (for example
 `anthropic/claude-sonnet-5.5` for OpenRouter), not a URL. Restart the server
 after changing `.env`.
 
-### 1. PayPal sandbox setup
 
-1. Go to <https://developer.paypal.com/dashboard/> and open **Apps & Credentials → Sandbox**.
-2. Create an app (or use the default). Copy **Client ID** and **Secret** into `.env`.
-3. Make sure the app has **Subscriptions**, **Payouts** and **Invoicing** enabled (App features), and **Log in with PayPal** if you want the maintainer login flow. Payouts needs your sandbox business account to hold a balance: add test funds in the sandbox account page if it is empty.
-4. Under **Testing tools → Sandbox accounts**, create at least:
-   - 1 **personal** account to act as the **funder** (approves the subscription),
-   - 2 **personal** accounts to act as **maintainers** (receive payouts).
-5. **Webhooks**: PayPal can only call a public HTTPS URL. Deploy to Render (below) or run `ngrok http 3000`, set `BASE_URL` to that URL, then in your app's **Webhooks** section add `https://YOUR-URL/api/webhooks/paypal` with these events: `BILLING.SUBSCRIPTION.ACTIVATED`, `BILLING.SUBSCRIPTION.CANCELLED`, `BILLING.SUBSCRIPTION.SUSPENDED`, `BILLING.SUBSCRIPTION.EXPIRED`, `BILLING.SUBSCRIPTION.PAYMENT.FAILED`, `PAYMENT.SALE.COMPLETED`, and all `PAYMENT.PAYOUTS-ITEM.*` events. Copy the **Webhook ID** into `PAYPAL_WEBHOOK_ID`.
-6. Optional: `npm run setup:paypal` creates the product and the four plans ($5/$10/$20/$50) up front and prints `PAYPAL_PLAN_IDS` (otherwise they are created on first use).
-
-### 2. Run the demo
+## Run the demo
 
 1. Open the app, paste a public GitHub repo with a `package.json` (or paste one), choose a budget, **Scan**.
 2. Review the split in the table. Edit an amount, watch the bar update. Enter your email and click **Start ... with PayPal**.
