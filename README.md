@@ -16,6 +16,14 @@ SourceKind takes a repo (or a `package.json`) and a monthly budget, scores each 
 | Records | Invoicing API: a receipt invoice per cycle; Refunds API for unpaid money | `issueInvoice`, `refundSale` |
 | Proof | The public ledger shows PayPal batch / item / transaction ids and offers a copyable public badge for contributor profiles; the badge reports payouts confirmed as paid | `/#/ledger`, `/badge/<pledge-id>.svg` |
 
+How we split the money
+
+For a budget $B$ and dependencies $i = 1, \dots, n$ with scores $s_i$, each share is proportional to its score:
+
+$$\text{share}i = B \cdot \frac{s_i}{\sum{j=1}^{n} s_j}$$
+
+In our demo, $B = 20$ and the scores sum to $662.6$, so a package scoring $84.6$ receives $20 \cdot \frac{84.6}{662.6} \approx \$2.55$. Because the shares always sum to $B$, the pool is fully allocated, and rebalancing after a funder edit is just recomputing the remaining shares.
+
 ## What the AI does
 
 The AI never decides money. Amounts come from a deterministic scoring engine (`src/scoring.js`: need 40%, importance 30%, reach 20%, health 10%).
