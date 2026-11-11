@@ -546,8 +546,7 @@ async function claimView(q) {
     <div class="row"><span>PayPal: ${s.paypal ? `<b>${esc(s.paypal.email)}</b>` : CFG.paypalLogin ? '<a class="btn small" href="/auth/paypal">Log in with PayPal</a>' : '<span class="muted">not configured</span>'}</span></div>
     ${
       s.demo
-        ? `<div class="notice small">Sandbox demo mode is on: enter the maintainer name and a sandbox PayPal email instead of signing in. Turn this off with CLAIM_DEMO_MODE=false.</div>
-      ${s.githubLogin ? "" : `<div><label for="login">Maintainer (GitHub name)</label><input type="text" id="login" value="${esc(pre)}" list="logins"><datalist id="logins">${s.held.map((h) => `<option value="${esc(h.login)}">`).join("")}</datalist></div>`}
+        ? `${s.githubLogin ? "" : `<div><label for="login">Maintainer (GitHub name)</label><input type="text" id="login" value="${esc(pre)}" list="logins"><datalist id="logins">${s.held.map((h) => `<option value="${esc(h.login)}">`).join("")}</datalist></div>`}
       ${s.paypal ? "" : '<div><label for="ppEmail">Sandbox PayPal email to receive the money</label><input type="email" id="ppEmail" placeholder="maintainer-test@personal.example.com"></div>'}`
         : ""
     }
