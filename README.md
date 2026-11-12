@@ -37,8 +37,9 @@ No API key? Everything still works with built-in rule-based explanations and a r
 
 ## Sponsor tools
 
-- **AG Grid Community**: the editable review table (`public/app.js`, loaded from jsDelivr). Falls back to a plain table if the CDN is unreachable.
-- **Postman**: ready-made collection in `postman/upstream.postman_collection.json`.
+- AG Grid Community: the editable review table (`public/app.js`, loaded from jsDelivr). Falls back to a plain table if the CDN is unreachable.
+- Postman: ready-made collection in `postman/upstream.postman_collection.json`.
+- Render : For deployment
 
 ## Features
 
